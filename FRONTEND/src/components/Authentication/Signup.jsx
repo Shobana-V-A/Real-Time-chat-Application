@@ -13,173 +13,163 @@ const Signup = () => {
 
     const navigate = useNavigate();
 
-    // Function to upload the profile picture to Cloudinary securely
     const postDetails = (pics) => {
-        setPicLoading(true);
-        if (pics === undefined) {
-            alert("Please Select an Image!");
-            setPicLoading(false);
-            return;
-        }
+        if (!pics) return;
+        if (pics.type === "image/jpeg" || pics.type === "image/png" || pics.type === "image/webp") {
+            setPicLoading(true);
 
-        if (pics.type === "image/jpeg" || pics.type === "image/png") {
-            const data = new FormData();
-            data.append("file", pics);
+            const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+            const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
-            // --- NEW CODE: Using Cloudinary Environment Variables ---
-            data.append("upload_preset", import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
-            data.append("cloud_name", import.meta.env.VITE_CLOUDINARY_CLOUD_NAME);
+            if (cloudName && uploadPreset) {
+                const data = new FormData();
+                data.append("file", pics);
+                data.append("upload_preset", uploadPreset);
+                data.append("cloud_name", cloudName);
 
-            fetch(`https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`, {
-                method: "POST",
-                body: data,
-            })
-                // --------------------------------------------------------
-                .then((res) => {
-                    if (!res.ok) throw new Error("Upload failed");
-                    return res.json();
+                fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+                    method: "POST",
+                    body: data,
                 })
-                .then((data) => {
-                    setPic(data.url.toString()); // Save the image URL to state
-                    setPicLoading(false);
-                })
-                .catch((err) => {
-                    console.error(err);
-                    alert("Image upload failed. Please try again.");
-                    setPicLoading(false);
-                });
+                    .then((res) => res.json())
+                    .then((data) => {
+                        if (data.secure_url || data.url) {
+                            setPic(data.secure_url || data.url);
+                        } else {
+                            readAsBase64(pics);
+                        }
+                        setPicLoading(false);
+                    })
+                    .catch(() => {
+                        readAsBase64(pics);
+                    });
+            } else {
+                readAsBase64(pics);
+            }
         } else {
-            alert("Please Select a valid Image file (JPEG/PNG)");
-            setPicLoading(false);
+            alert("Please select a valid image file (JPEG/PNG/WebP)");
         }
+    };
+
+    const readAsBase64 = (file) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setPic(reader.result);
+            setPicLoading(false);
+        };
+        reader.readAsDataURL(file);
     };
 
     const submitHandler = async (e) => {
         e.preventDefault();
-        setLoading(true);
-
         if (!name || !email || !password || !confirmpassword) {
-            alert("Please Fill all the Fields");
-            setLoading(false);
+            alert("Please fill in all required fields");
             return;
         }
 
         if (password !== confirmpassword) {
-            alert("Passwords Do Not Match");
-            setLoading(false);
+            alert("Passwords do not match");
             return;
         }
 
         try {
-            const config = {
-                headers: {
-                    "Content-type": "application/json",
-                },
-            };
+            setLoading(true);
+            const config = { headers: { "Content-type": "application/json" } };
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
-            // --- THE CRITICAL UPDATE: Using the dynamic backend URL ---
             const { data } = await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/api/user`,
-                {
-                    name,
-                    email,
-                    password,
-                    pic,
-                },
+                `${backendUrl}/api/user`,
+                { name, email, password, pic },
                 config
             );
-            // ----------------------------------------------------------
 
-            alert("Registration Successful!");
-
-            // Save the user data (including the JWT token) to local storage
             localStorage.setItem("userInfo", JSON.stringify(data));
             setLoading(false);
-
-            // Redirect the user to the chat page
             navigate("/chats");
         } catch (error) {
-            alert("Error Occurred! Registration failed.");
+            alert(error.response?.data?.message || "Registration failed");
             setLoading(false);
         }
     };
 
     return (
-        <form onSubmit={submitHandler} className="flex flex-col gap-4 w-full mt-4">
+        <form onSubmit={submitHandler} className="flex flex-col gap-3.5 w-full">
             <div>
-                <label className="block text-sm font-medium text-gray-800 mb-1 drop-shadow-sm">
-                    Name
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Full Name
                 </label>
                 <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full px-4 py-2 border border-white/60 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/50 backdrop-blur-sm text-gray-900 shadow-inner placeholder-gray-500"
-                    placeholder="Enter your name"
+                    className="w-full px-3.5 py-2 bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-slate-900 text-sm font-medium transition shadow-inner placeholder:text-slate-400"
+                    placeholder="Jane Doe"
                     required
                 />
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-gray-800 mb-1 drop-shadow-sm">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                     Email Address
                 </label>
                 <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-2 border border-white/60 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/50 backdrop-blur-sm text-gray-900 shadow-inner placeholder-gray-500"
-                    placeholder="Enter your email"
+                    className="w-full px-3.5 py-2 bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-slate-900 text-sm font-medium transition shadow-inner placeholder:text-slate-400"
+                    placeholder="you@example.com"
                     required
                 />
             </div>
 
-            <div>
-                <label className="block text-sm font-medium text-gray-800 mb-1 drop-shadow-sm">
-                    Password
-                </label>
-                <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-2 border border-white/60 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/50 backdrop-blur-sm text-gray-900 shadow-inner placeholder-gray-500"
-                    placeholder="Enter your password"
-                    required
-                />
+            <div className="grid grid-cols-2 gap-3">
+                <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                        Password
+                    </label>
+                    <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-slate-900 text-sm font-medium transition shadow-inner placeholder:text-slate-400"
+                        placeholder="••••••••"
+                        required
+                    />
+                </div>
+                <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                        Confirm
+                    </label>
+                    <input
+                        type="password"
+                        value={confirmpassword}
+                        onChange={(e) => setConfirmpassword(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-slate-900 text-sm font-medium transition shadow-inner placeholder:text-slate-400"
+                        placeholder="••••••••"
+                        required
+                    />
+                </div>
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-gray-800 mb-1 drop-shadow-sm">
-                    Confirm Password
-                </label>
-                <input
-                    type="password"
-                    value={confirmpassword}
-                    onChange={(e) => setConfirmpassword(e.target.value)}
-                    className="w-full px-4 py-2 border border-white/60 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/50 backdrop-blur-sm text-gray-900 shadow-inner placeholder-gray-500"
-                    placeholder="Confirm your password"
-                    required
-                />
-            </div>
-
-            <div>
-                <label className="block text-sm font-medium text-gray-800 mb-1 drop-shadow-sm">
-                    Upload your Picture
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Profile Picture (Optional)
                 </label>
                 <input
                     type="file"
                     accept="image/*"
                     onChange={(e) => postDetails(e.target.files[0])}
-                    className="w-full px-4 py-2 border border-white/60 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/50 backdrop-blur-sm text-gray-900 shadow-inner file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition"
+                    className="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-slate-200 rounded-xl p-1 bg-slate-50/80"
                 />
+                {picLoading && <p className="text-[11px] font-semibold text-blue-600 mt-1">Uploading avatar...</p>}
             </div>
 
             <button
                 type="submit"
                 disabled={loading || picLoading}
-                className="w-full bg-blue-600/90 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition mt-4 disabled:opacity-50 shadow-md"
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl transition-all shadow-md shadow-blue-500/20 hover:shadow-lg disabled:opacity-50 mt-1 text-sm tracking-wide"
             >
-                {picLoading ? "Uploading Image..." : loading ? "Signing up..." : "Sign Up"}
+                {picLoading ? "Uploading Image..." : loading ? "Creating Account..." : "Create Free Account"}
             </button>
         </form>
     );

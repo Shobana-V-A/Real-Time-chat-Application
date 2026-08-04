@@ -16,7 +16,8 @@ const app = express();
 
 // Middleware
 app.use(cors()); // Allows frontend to talk to backend
-app.use(express.json()); // Allows server to accept JSON data
+app.use(express.json({ limit: "10mb" })); // Allows server to accept JSON data up to 10mb (for image uploads)
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use('/api/user', userRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/message", messageRoutes);

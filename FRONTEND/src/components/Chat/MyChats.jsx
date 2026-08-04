@@ -6,11 +6,11 @@ import GroupChatModal from "./GroupChatModal";
 
 const MyChats = () => {
     const [loggedUser, setLoggedUser] = useState();
-    const [isModalOpen, setIsModalOpen] = useState(false); // Controls the modal visibility
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [filterQuery, setFilterQuery] = useState("");
 
     const { selectedChat, setSelectedChat, user, chats, setChats } = ChatState();
 
-    // Function to fetch all existing chats for the logged-in user
     const fetchChats = async () => {
         try {
             const config = {
@@ -18,78 +18,135 @@ const MyChats = () => {
                     Authorization: `Bearer ${user.token}`,
                 },
             };
-
-            // --- THE CRITICAL UPDATE: Using the dynamic backend URL ---
-            const { data } = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/chat`, config);
-            // ----------------------------------------------------------
-
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+            const { data } = await axios.get(`${backendUrl}/api/chat`, config);
             setChats(data);
         } catch (error) {
-            alert("Failed to load your chats");
+            console.error("Failed to fetch chats:", error);
         }
     };
 
     useEffect(() => {
-        // Grab the user from local storage so we know who is logged in
         setLoggedUser(JSON.parse(localStorage.getItem("userInfo")));
         fetchChats();
         // eslint-disable-next-line
     }, []);
 
-    return (
-        <div className={`w-full md:w-1/3 bg-white/30 backdrop-blur-md rounded-2xl shadow-xl border border-white/40 p-4 flex-col h-full ${selectedChat ? "hidden md:flex" : "flex"}`}>
+    const filteredChats = chats?.filter((c) => {
+        const chatName = !c.isGroupChat ? getSender(loggedUser, c.users) : c.chatName;
+        return chatName?.toLowerCase().includes(filterQuery.toLowerCase());
+    });
 
-            {/* Header section with Glassmorphism */}
-            <div className="flex justify-between items-center pb-3 border-b border-white/40">
-                <h2 className="text-xl font-bold text-gray-800 drop-shadow-sm">My Chats</h2>
+    return (
+        <aside className={`w-full md:w-80 lg:w-96 bg-slate-900/80 backdrop-blur-2xl rounded-3xl border border-slate-800/90 p-4 flex-col h-full shadow-2xl overflow-hidden ${selectedChat ? "hidden md:flex" : "flex"}`}>
+            
+            {/* Header */}
+            <div className="flex justify-between items-center pb-3 border-b border-slate-800/80">
+                <div>
+                    <h2 className="text-lg font-bold text-white font-outfit">Messages</h2>
+                    <p className="text-xs text-slate-400 font-medium">
+                        {chats?.length || 0} active conversations
+                    </p>
+                </div>
                 <button
                     onClick={() => setIsModalOpen(true)}
-                    className="bg-white/40 px-3 py-1 text-sm font-bold text-gray-800 rounded-md hover:bg-white/60 transition shadow-sm border border-white/50"
+                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition shadow-md shadow-blue-500/20 flex items-center gap-1"
                 >
-                    New Group +
+                    <span>👥</span>
+                    <span>New Group +</span>
                 </button>
             </div>
 
-            {/* List of active chats */}
-            <div className="flex-1 overflow-y-auto mt-4 flex flex-col space-y-2 pr-1">
-                {chats ? (
-                    chats.map((chat) => (
-                        <div
-                            onClick={() => setSelectedChat(chat)}
-                            className={`cursor-pointer px-4 py-3 rounded-xl transition border ${selectedChat === chat
-                                ? "bg-blue-600/90 text-white shadow-md border-blue-500"
-                                : "bg-white/40 text-gray-800 hover:bg-white/60 border-white/50 shadow-sm"
-                                }`}
-                            key={chat._id}
-                        >
-                            <p className="font-bold">
-                                {/* If it's a group chat, show the group name. Otherwise, show the other user's name */}
-                                {!chat.isGroupChat
-                                    ? getSender(loggedUser, chat.users)
-                                    : chat.chatName}
-                            </p>
+            {/* Filter Search Input */}
+            <div className="mt-3">
+                <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs pointer-events-none">
+                        🔍
+                    </span>
+                    <input
+                        type="text"
+                        placeholder="Filter chats..."
+                        value={filterQuery}
+                        onChange={(e) => setFilterQuery(e.target.value)}
+                        className="w-full pl-8 pr-3 py-2 bg-slate-800/60 border border-slate-700/60 rounded-xl text-slate-100 text-xs placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+            </div>
 
-                            {/* Display the latest message snippet if it exists */}
-                            {chat.latestMessage && (
-                                <p className={`text-xs mt-1 truncate font-medium ${selectedChat === chat ? "text-blue-100" : "text-gray-600"}`}>
-                                    <b>{chat.latestMessage.sender.name} : </b>
-                                    {/* Quick check: If the latest message is a Cloudinary link, show "Image" instead of the long URL */}
-                                    {chat.latestMessage.content.includes("cloudinary.com")
-                                        ? "📷 Image"
-                                        : chat.latestMessage.content}
-                                </p>
-                            )}
+            {/* List of active chats */}
+            <div className="flex-1 overflow-y-auto mt-3 space-y-1.5 pr-1">
+                {filteredChats ? (
+                    filteredChats.length === 0 ? (
+                        <div className="text-center py-12 text-slate-500 text-xs">
+                            No conversations found
                         </div>
-                    ))
+                    ) : (
+                        filteredChats.map((chat) => {
+                            const isSelected = selectedChat?._id === chat._id;
+                            const chatPartnerName = !chat.isGroupChat ? getSender(loggedUser, chat.users) : chat.chatName;
+                            const chatPartnerUser = !chat.isGroupChat ? chat.users?.find(u => u._id !== loggedUser?._id) : null;
+
+                            return (
+                                <div
+                                    key={chat._id}
+                                    onClick={() => setSelectedChat(chat)}
+                                    className={`cursor-pointer p-3 rounded-2xl transition-all flex items-center gap-3 border ${
+                                        isSelected
+                                            ? "bg-gradient-to-r from-blue-600/90 to-indigo-600/90 text-white border-blue-400/50 shadow-lg shadow-blue-500/20"
+                                            : "bg-slate-800/40 text-slate-200 hover:bg-slate-800/80 border-slate-800/60"
+                                    }`}
+                                >
+                                    {/* Avatar Display */}
+                                    <div className="relative shrink-0">
+                                        {!chat.isGroupChat ? (
+                                            <img
+                                                src={chatPartnerUser?.pic || "https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg"}
+                                                alt={chatPartnerName}
+                                                className="w-11 h-11 rounded-2xl object-cover ring-2 ring-slate-700/50"
+                                            />
+                                        ) : (
+                                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-md">
+                                                👥
+                                            </div>
+                                        )}
+                                        {!chat.isGroupChat && (
+                                            <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-slate-900" />
+                                        )}
+                                    </div>
+
+                                    {/* Chat Details */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between items-baseline mb-0.5">
+                                            <h3 className={`font-bold text-sm truncate ${isSelected ? "text-white" : "text-slate-100"}`}>
+                                                {chatPartnerName}
+                                            </h3>
+                                        </div>
+
+                                        {chat.latestMessage ? (
+                                            <p className={`text-xs truncate font-medium ${isSelected ? "text-blue-100" : "text-slate-400"}`}>
+                                                <span className="font-semibold">{chat.latestMessage.sender._id === loggedUser?._id ? "You" : chat.latestMessage.sender.name}: </span>
+                                                {chat.latestMessage.content.includes("cloudinary.com") ? "📷 Photo attachment" : chat.latestMessage.content}
+                                            </p>
+                                        ) : (
+                                            <p className={`text-xs italic ${isSelected ? "text-blue-200" : "text-slate-500"}`}>
+                                                No messages yet
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )
                 ) : (
-                    <p className="text-gray-700 font-medium text-center mt-10">Loading chats...</p>
+                    <div className="text-center py-10 text-slate-500 text-xs">
+                        Loading conversations...
+                    </div>
                 )}
             </div>
 
-            {/* Render the Modal Component */}
+            {/* Render Group Chat Modal */}
             <GroupChatModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-
-        </div>
+        </aside>
     );
 };
 

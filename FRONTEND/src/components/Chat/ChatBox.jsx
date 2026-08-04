@@ -5,12 +5,13 @@ const ChatBox = () => {
     const { selectedChat } = ChatState();
 
     return (
-        <div
-            className={`w-full md:w-2/3 bg-white/30 backdrop-blur-md rounded-2xl shadow-xl border border-white/40 p-4 flex-col h-full ${selectedChat ? "flex" : "hidden md:flex"
-                }`}
+        <main
+            className={`flex-1 bg-slate-900/80 backdrop-blur-2xl rounded-3xl border border-slate-800/90 p-4 flex-col h-full shadow-2xl overflow-hidden relative ${
+                selectedChat ? "flex" : "hidden md:flex"
+            }`}
         >
             <SingleChat />
-        </div>
+        </main>
     );
 };
 

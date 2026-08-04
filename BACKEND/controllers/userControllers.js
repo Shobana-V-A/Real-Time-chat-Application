@@ -49,10 +49,27 @@ const registerUser = asyncHandler(async (req, res) => {
 const authUser = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
-    // Find user by email
-    const user = await User.findOne({ email });
+    let user = await User.findOne({ email });
 
-    // If user exists AND the password matches (using the method we wrote in userModel)
+    // Auto-create or repair Guest User if email is guest@example.com
+    if (email === "guest@example.com") {
+        if (!user) {
+            user = await User.create({
+                name: "Guest User",
+                email: "guest@example.com",
+                password: password || "123456",
+                pic: "https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg"
+            });
+        } else {
+            const isMatch = await user.matchPassword(password);
+            if (!isMatch) {
+                user.password = password || "123456";
+                await user.save();
+            }
+        }
+    }
+
+    // If user exists AND the password matches
     if (user && (await user.matchPassword(password))) {
         res.json({
             _id: user._id,
@@ -60,6 +77,7 @@ const authUser = asyncHandler(async (req, res) => {
             email: user.email,
             pic: user.pic,
             role: user.role,
+            customStatus: user.customStatus || "",
             token: generateToken(user._id),
         });
     } else {
@@ -85,4 +103,38 @@ const allUsers = asyncHandler(async (req, res) => {
     res.send(users);
 });
 
-module.exports = { registerUser, authUser, allUsers };
+// @description    Update user profile
+// @route          PUT /api/user/profile
+const updateUserProfile = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id);
+
+    if (user) {
+        user.name = req.body.name || user.name;
+        if (req.body.pic) {
+            user.pic = req.body.pic;
+        }
+        if (req.body.customStatus !== undefined) {
+            user.customStatus = req.body.customStatus;
+        }
+        if (req.body.password) {
+            user.password = req.body.password;
+        }
+
+        const updatedUser = await user.save();
+
+        res.json({
+            _id: updatedUser._id,
+            name: updatedUser.name,
+            email: updatedUser.email,
+            pic: updatedUser.pic,
+            role: updatedUser.role,
+            customStatus: updatedUser.customStatus || "",
+            token: generateToken(updatedUser._id),
+        });
+    } else {
+        res.status(404);
+        throw new Error("User not found");
+    }
+});
+
+module.exports = { registerUser, authUser, allUsers, updateUserProfile };
