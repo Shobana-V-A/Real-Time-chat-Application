@@ -5,25 +5,25 @@ const asyncHandler = require("express-async-handler");
 const protect = asyncHandler(async (req, res, next) => {
     let token;
 
-    // Check if the request has an authorization header starting with "Bearer"
     if (
         req.headers.authorization &&
         req.headers.authorization.startsWith("Bearer")
     ) {
         try {
-            // Get the token string (removes the word "Bearer ")
             token = req.headers.authorization.split(" ")[1];
-
-            // Decode the token using our secret key
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-            // Find the user in the database and attach them to the request (minus their password)
             req.user = await User.findById(decoded.id).select("-password");
 
-            next(); // Move on to the actual route logic
+            if (!req.user) {
+                res.status(401);
+                throw new Error("User not found or session expired. Please log in again.");
+            }
+
+            next();
         } catch (error) {
             res.status(401);
-            throw new Error("Not authorized, token failed");
+            throw new Error(error.message || "Not authorized, token failed");
         }
     }
 

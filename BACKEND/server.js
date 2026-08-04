@@ -14,18 +14,25 @@ connectDB();
 
 const app = express();
 
+const { notFound, errorHandler } = require('./middleware/errorMiddleware');
+
 // Middleware
 app.use(cors()); // Allows frontend to talk to backend
 app.use(express.json({ limit: "10mb" })); // Allows server to accept JSON data up to 10mb (for image uploads)
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
-app.use('/api/user', userRoutes);
-app.use("/api/chat", chatRoutes);
-app.use("/api/message", messageRoutes);
 
 // A simple test route
 app.get('/', (req, res) => {
     res.send('Chat App API is running successfully!');
 });
+
+app.use('/api/user', userRoutes);
+app.use("/api/chat", chatRoutes);
+app.use("/api/message", messageRoutes);
+
+// Error Handling Middlewares
+app.use(notFound);
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
