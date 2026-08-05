@@ -4,6 +4,10 @@ export const playNotificationSound = () => {
         if (!AudioContext) return;
         const ctx = new AudioContext();
 
+        if (ctx.state === "suspended") {
+            ctx.resume();
+        }
+
         const osc1 = ctx.createOscillator();
         const osc2 = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -17,8 +21,8 @@ export const playNotificationSound = () => {
         osc2.frequency.setValueAtTime(880, ctx.currentTime); // A5
         osc2.frequency.exponentialRampToValueAtTime(1174.66, ctx.currentTime + 0.12); // D6
 
-        gain.gain.setValueAtTime(0.12, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
 
         osc1.connect(gain);
         osc2.connect(gain);
@@ -27,8 +31,8 @@ export const playNotificationSound = () => {
         osc1.start();
         osc2.start();
 
-        osc1.stop(ctx.currentTime + 0.25);
-        osc2.stop(ctx.currentTime + 0.25);
+        osc1.stop(ctx.currentTime + 0.35);
+        osc2.stop(ctx.currentTime + 0.35);
     } catch (e) {
         console.warn("Audio notification chime unavailable:", e);
     }
