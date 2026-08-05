@@ -70,22 +70,34 @@ const SingleChat = () => {
     }, [selectedChat]);
 
     useEffect(() => {
-        socket.on("message received", (newMessageReceived) => {
+        if (!socket) return;
+
+        const messageHandler = (newMessageReceived) => {
             if (
                 !selectedChatCompare ||
                 selectedChatCompare._id !== newMessageReceived.chat._id
             ) {
-                if (!notification.includes(newMessageReceived)) {
-                    setNotification([newMessageReceived, ...notification]);
-                    playNotificationSound();
-                }
+                setNotification((prevNotifs) => {
+                    if (!prevNotifs.some((n) => n._id === newMessageReceived._id)) {
+                        playNotificationSound();
+                        return [newMessageReceived, ...prevNotifs];
+                    }
+                    return prevNotifs;
+                });
             } else {
-                setMessages([...messages, newMessageReceived]);
+                setMessages((prevMsgs) => {
+                    if (!prevMsgs.some((m) => m._id === newMessageReceived._id)) {
+                        return [...prevMsgs, newMessageReceived];
+                    }
+                    return prevMsgs;
+                });
             }
-        });
+        };
+
+        socket.on("message received", messageHandler);
 
         return () => {
-            socket.off("message received");
+            socket.off("message received", messageHandler);
         };
     });
 
