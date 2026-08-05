@@ -7,6 +7,12 @@ const ScrollableChat = ({ messages, onViewProfile }) => {
         return content.includes("cloudinary.com") || content.startsWith("data:image/");
     };
 
+    const formatTime = (dateString) => {
+        if (!dateString) return "";
+        const date = new Date(dateString);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
     return (
         <div className="flex flex-col gap-3 py-2">
             {messages &&
@@ -45,10 +51,10 @@ const ScrollableChat = ({ messages, onViewProfile }) => {
                                 )}
 
                                 <div
-                                    className={`px-4 py-2.5 rounded-2xl text-sm font-medium leading-relaxed tracking-wide ${
+                                    className={`px-3.5 py-2 rounded-2xl text-sm font-medium leading-relaxed tracking-wide shadow-md ${
                                         isCurrentUser
-                                            ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-xs shadow-md shadow-blue-500/10"
-                                            : "bg-slate-800/90 text-slate-100 border border-slate-700/70 rounded-bl-xs shadow-sm"
+                                            ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-xs shadow-blue-500/10"
+                                            : "bg-slate-800/90 text-slate-100 border border-slate-700/70 rounded-bl-xs"
                                     } ${isImage(m.content) ? "p-1.5 bg-slate-900/80 border border-slate-800" : ""}`}
                                 >
                                     {isImage(m.content) ? (
@@ -67,6 +73,20 @@ const ScrollableChat = ({ messages, onViewProfile }) => {
                                     ) : (
                                         <p className="whitespace-pre-wrap break-words">{m.content}</p>
                                     )}
+
+                                    {/* Timestamp & WhatsApp Ticks */}
+                                    <div
+                                        className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${
+                                            isCurrentUser ? "text-blue-100/80" : "text-slate-400"
+                                        }`}
+                                    >
+                                        <span>{formatTime(m.createdAt)}</span>
+                                        {isCurrentUser && (
+                                            <span className="text-blue-200 font-extrabold ml-0.5 tracking-tighter text-[11px]" title="Delivered">
+                                                ✓✓
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>

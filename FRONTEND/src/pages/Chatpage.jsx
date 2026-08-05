@@ -2,9 +2,12 @@ import { ChatState } from "../context/ChatProvider";
 import SideDrawer from "../components/Chat/SideDrawer";
 import MyChats from "../components/Chat/MyChats";
 import ChatBox from "../components/Chat/ChatBox";
+import ToastNotification from "../components/Chat/ToastNotification";
 
 const Chatpage = () => {
-    const { user } = ChatState();
+    const { user, notification, setSelectedChat, setNotification } = ChatState();
+
+    const latestNotif = notification.length > 0 ? notification[0] : null;
 
     return (
         <div className="w-full h-screen bg-slate-950 flex flex-col overflow-hidden relative selection:bg-blue-500 selection:text-white">
@@ -21,6 +24,21 @@ const Chatpage = () => {
                 {user && <MyChats />}
                 {user && <ChatBox />}
             </div>
+
+            {/* Live Floating Toast Notification */}
+            {user && latestNotif && (
+                <ToastNotification
+                    latestNotification={latestNotif}
+                    currentUser={user}
+                    onSelectChat={(chat) => {
+                        setSelectedChat(chat);
+                        setNotification(notification.filter((n) => n !== latestNotif));
+                    }}
+                    onClose={() => {
+                        setNotification(notification.filter((n) => n !== latestNotif));
+                    }}
+                />
+            )}
         </div>
     );
 };

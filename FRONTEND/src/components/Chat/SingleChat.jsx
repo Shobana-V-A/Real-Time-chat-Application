@@ -6,6 +6,8 @@ import ScrollableChat from "./ScrollableChat";
 import io from "socket.io-client";
 import UpdateGroupChatModal from "./UpdateGroupChatModal";
 import ProfileModal from "./ProfileModal";
+import { playNotificationSound } from "../../config/notificationSound";
+import EmojiPicker from "./EmojiPicker";
 
 var socket, selectedChatCompare;
 
@@ -17,6 +19,7 @@ const SingleChat = () => {
 
     const [typing, setTyping] = useState(false);
     const [istyping, setIsTyping] = useState(false);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
     const [imageLoading, setImageLoading] = useState(false);
     const fileInputRef = useRef(null);
@@ -74,6 +77,7 @@ const SingleChat = () => {
             ) {
                 if (!notification.includes(newMessageReceived)) {
                     setNotification([newMessageReceived, ...notification]);
+                    playNotificationSound();
                 }
             } else {
                 setMessages([...messages, newMessageReceived]);
@@ -313,7 +317,15 @@ const SingleChat = () => {
                     </div>
 
                     {/* Bottom Input Area */}
-                    <div className="shrink-0 pt-1">
+                    <div className="shrink-0 pt-1 relative">
+                        <EmojiPicker
+                            isOpen={showEmojiPicker}
+                            onClose={() => setShowEmojiPicker(false)}
+                            onSelectEmoji={(emoji) => {
+                                setNewMessage((prev) => prev + emoji);
+                            }}
+                        />
+
                         <div className="flex items-center gap-2 bg-slate-800/90 border border-slate-700/80 rounded-2xl p-1.5 shadow-xl">
                             
                             <input
@@ -323,6 +335,20 @@ const SingleChat = () => {
                                 onChange={(e) => postDetails(e.target.files[0])}
                                 className="hidden"
                             />
+
+                            {/* Emoji Picker Toggle */}
+                            <button
+                                type="button"
+                                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                className={`p-2.5 rounded-xl transition ${
+                                    showEmojiPicker
+                                        ? "bg-blue-600/30 text-blue-400"
+                                        : "text-slate-400 hover:text-amber-400 hover:bg-slate-700/60"
+                                }`}
+                                title="Emoji Picker"
+                            >
+                                😊
+                            </button>
 
                             {/* Attachment Button */}
                             <button

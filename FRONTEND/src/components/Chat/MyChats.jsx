@@ -32,6 +32,16 @@ const MyChats = () => {
         // eslint-disable-next-line
     }, []);
 
+    const formatTime = (dateString) => {
+        if (!dateString) return "";
+        const date = new Date(dateString);
+        const now = new Date();
+        const isToday = date.toDateString() === now.toDateString();
+        return isToday
+            ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    };
+
     const filteredChats = chats?.filter((c) => {
         const chatName = !c.isGroupChat ? getSender(loggedUser, c.users) : c.chatName;
         return chatName?.toLowerCase().includes(filterQuery.toLowerCase());
@@ -43,9 +53,12 @@ const MyChats = () => {
             {/* Header */}
             <div className="flex justify-between items-center pb-3 border-b border-slate-800/80">
                 <div>
-                    <h2 className="text-lg font-bold text-white font-outfit">Messages</h2>
+                    <h2 className="text-lg font-bold text-white font-outfit flex items-center gap-2">
+                        <span>💬</span>
+                        <span>Chats</span>
+                    </h2>
                     <p className="text-xs text-slate-400 font-medium">
-                        {chats?.length || 0} active conversations
+                        {chats?.length || 0} conversations
                     </p>
                 </div>
                 <button
@@ -65,7 +78,7 @@ const MyChats = () => {
                     </span>
                     <input
                         type="text"
-                        placeholder="Filter chats..."
+                        placeholder="Search or start new chat..."
                         value={filterQuery}
                         onChange={(e) => setFilterQuery(e.target.value)}
                         className="w-full pl-8 pr-3 py-2 bg-slate-800/60 border border-slate-700/60 rounded-xl text-slate-100 text-xs placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -120,12 +133,24 @@ const MyChats = () => {
                                             <h3 className={`font-bold text-sm truncate ${isSelected ? "text-white" : "text-slate-100"}`}>
                                                 {chatPartnerName}
                                             </h3>
+                                            {chat.latestMessage && (
+                                                <span className={`text-[10px] shrink-0 font-medium ${isSelected ? "text-blue-200" : "text-slate-500"}`}>
+                                                    {formatTime(chat.latestMessage.createdAt)}
+                                                </span>
+                                            )}
                                         </div>
 
                                         {chat.latestMessage ? (
-                                            <p className={`text-xs truncate font-medium ${isSelected ? "text-blue-100" : "text-slate-400"}`}>
-                                                <span className="font-semibold">{chat.latestMessage.sender._id === loggedUser?._id ? "You" : chat.latestMessage.sender.name}: </span>
-                                                {chat.latestMessage.content.includes("cloudinary.com") ? "📷 Photo attachment" : chat.latestMessage.content}
+                                            <p className={`text-xs truncate font-medium flex items-center gap-1 ${isSelected ? "text-blue-100" : "text-slate-400"}`}>
+                                                {chat.latestMessage.sender._id === loggedUser?._id && (
+                                                    <span className="text-blue-400 font-bold">✓</span>
+                                                )}
+                                                <span className="font-semibold">
+                                                    {chat.latestMessage.sender._id === loggedUser?._id ? "You" : chat.latestMessage.sender.name}: 
+                                                </span>
+                                                <span>
+                                                    {chat.latestMessage.content.includes("cloudinary.com") ? "📷 Photo" : chat.latestMessage.content}
+                                                </span>
                                             </p>
                                         ) : (
                                             <p className={`text-xs italic ${isSelected ? "text-blue-200" : "text-slate-500"}`}>
